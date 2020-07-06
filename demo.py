@@ -17,6 +17,8 @@ video_path = "./data/images/road.mp4"
 num_classes = 80
 input_size = 416
 score_thresh = 0.3
+
+iou_type = 'diou'  #yolov4:diou, else giou
 iou_thresh = 0.45
 
 graph = tf.Graph()
@@ -42,7 +44,7 @@ with tf.Session(graph=graph) as sess:
                                         np.reshape(pred_lbbox, (-1, 5 + num_classes))], axis=0)
 
             bboxes = utils.postprocess_boxes(pred_bbox, frame_size, input_size, score_thresh)
-            bboxes = utils.nms(bboxes, iou_thresh, method='nms')
+            bboxes = utils.nms(bboxes, iou_type, iou_thresh, method='nms')
             image = utils.draw_bbox(frame, bboxes)
 
             curr_time = time.time()

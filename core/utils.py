@@ -92,8 +92,88 @@ def bboxes_iou(boxes1, boxes2):
     inter_area = inter_section[..., 0] * inter_section[..., 1]
     union_area = boxes1_area + boxes2_area - inter_area
     
-    ious = np.maximum(1.0 * inter_area / union_area, np.finfo(np.float32).eps)
-    return ious
+    iou = np.maximum(1.0 * inter_area / union_area, np.finfo(np.float32).eps)
+    return iou
+
+
+def bboxes_giou(boxes1, boxes2):
+    boxes1 = np.array(boxes1)
+    boxes2 = np.array(boxes2)
+
+    boxes1_area = (boxes1[..., 2] - boxes1[..., 0]) * (boxes1[..., 3] - boxes1[..., 1])
+    boxes2_area = (boxes2[..., 2] - boxes2[..., 0]) * (boxes2[..., 3] - boxes2[..., 1])
+
+    left_up = np.maximum(boxes1[..., :2], boxes2[..., :2])
+    right_down = np.minimum(boxes1[..., 2:], boxes2[..., 2:])
+
+    inter_section = np.maximum(right_down - left_up, 0.0)
+    inter_area = inter_section[..., 0] * inter_section[..., 1]
+    union_area = boxes1_area + boxes2_area - inter_area
+    
+    iou = np.maximum(1.0 * inter_area / union_area, np.finfo(np.float32).eps)
+    
+    left_up_min = np.minimum(boxes1[..., :2], boxes2[..., :2])
+    right_down_max = np.maximum(boxes1[..., 2:], boxes2[..., 2:])
+    c_area left_up_min * right_down_max
+
+    giou_term = (c_area - union_area) / c_area
+    return iou - giou_term
+
+
+def bboxes_diou(boxes1, boxes2):
+    boxes1 = np.array(boxes1)
+    boxes2 = np.array(boxes2)
+
+    left = np.maximum(boxes1[..., 0], boxes2[..., 0])
+    up = np.maximum(boxes1[..., 1], boxes2[..., 1])
+    right = np.maximum(boxes1[..., 2], boxes2[..., 2])
+    down = np.maximum(boxes1[..., 3], boxes2[..., 3])
+
+    c = (right - left) * (right - left) + (up - down) * (up - down)
+    iou = bboxes_iou(boxes1, boxes2)
+
+    ax = (boxes1[..., 0] + boxes1[..., 2]) / 2
+    ay = (boxes1[..., 1] + boxes1[..., 3]) / 2
+    bx = (boxes2[..., 0] + boxes2[..., 2]) / 2
+    by = (boxes2[..., 1] + boxes2[..., 3]) / 2
+
+    u = (ax - bx) * (ax - bx) + (ay - by) * (ay - by)
+    diou_term = u / c    
+    return iou - diou_term
+
+
+def bboxes_ciou(boxes1, boxes2):
+    boxes1 = np.array(boxes1)
+    boxes2 = np.array(boxes2)
+
+    left = np.maximum(boxes1[..., 0], boxes2[..., 0])
+    up = np.maximum(boxes1[..., 1], boxes2[..., 1])
+    right = np.maximum(boxes1[..., 2], boxes2[..., 2])
+    down = np.maximum(boxes1[..., 3], boxes2[..., 3])
+
+    c = (right - left) * (right - left) + (up - down) * (up - down)
+    iou = bboxes_iou(boxes1, boxes2)
+
+    ax = (boxes1[..., 0] + boxes1[..., 2]) / 2
+    ay = (boxes1[..., 1] + boxes1[..., 3]) / 2
+    bx = (boxes2[..., 0] + boxes2[..., 2]) / 2
+    by = (boxes2[..., 1] + boxes2[..., 3]) / 2
+
+    u = (ax - bx) * (ax - bx) + (ay - by) * (ay - by)
+    diou_term = u / c  
+
+    aw = boxes1[..., 2] - boxes1[..., 0]
+    ah = boxes1[..., 3] - boxes1[..., 1]
+    bw = boxes2[..., 2] - boxes2[..., 0]
+    bh = boxes2[..., 3] - boxes2[..., 1]
+
+    ar_gt = bw / bh
+    ar_pred = aw / ah
+
+    ar_loss = 4 / (np.pi * np.pi) * (np.arctan(ar_gt) - np.arctan(ar_pred)) * (np.arctan(ar_gt) - np.arctan(ar_pred))
+    alpha = ar_loss / (1 - iou + ar_loss + 0.000001)
+    ciou_term = diou_term + alpha * ar_loss
+    return iou - ciou_term
 
 
 def read_pb_return_tensors(graph, pb_file, return_elements):
@@ -106,7 +186,7 @@ def read_pb_return_tensors(graph, pb_file, return_elements):
     return return_elements
 
 
-def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
+def nms(bboxes, iou_type, iou_threshold, sigma=0.3, method='nms'):
     """param bboxes: (xmin, ymin, xmax, ymax, score, class)
     Note: soft-nms, https://arxiv.org/pdf/1704.04503.pdf https://github.com/bharatsingh430/soft-nms"""
     classes_in_img = list(set(bboxes[:, 5]))
@@ -121,7 +201,20 @@ def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
             best_bbox = cls_bboxes[max_ind]
             best_bboxes.append(best_bbox)
             cls_bboxes = np.concatenate([cls_bboxes[: max_ind], cls_bboxes[max_ind + 1:]])
-            iou = bboxes_iou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+
+            assert iou_type in ['iou', 'giou', 'diou', 'ciou']
+            if iou_type == 'iou':
+                iou = bboxes_iou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+            
+            if iou_type == 'giou':
+                iou = bboxes_giou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+            
+            if iou_type == 'diou':
+                iou = bboxes_diou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+
+            if iou_type == 'ciou':
+                iou = bboxes_ciou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+
             weight = np.ones((len(iou),), dtype=np.float32)
 
             assert method in ['nms', 'soft-nms']

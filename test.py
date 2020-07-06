@@ -37,6 +37,8 @@ if __name__ == '__main__':
     num_classes = 80
     input_size = 416
     score_thresh = 0.3
+
+    iou_type = 'diou' #yolov4:diou, else giou
     iou_thresh = 0.45
 
     graph = tf.Graph()
@@ -59,7 +61,7 @@ if __name__ == '__main__':
                                         np.reshape(pred_lbbox, (-1, 5 + num_classes))], axis=0)
 
             bboxes = utils.postprocess_boxes(pred_bbox, img_size, input_size, score_thresh)
-            bboxes = utils.nms(bboxes, iou_thresh, method='nms')
+            bboxes = utils.nms(bboxes, iou_type, iou_thresh, method='nms')
             
             if len(bboxes) > 0:
 	            image = utils.draw_bbox(img, bboxes) 
@@ -94,7 +96,7 @@ if __name__ == '__main__':
                                         np.reshape(pred_lbbox, (-1, 5 + num_classes))], axis=0)
 
             bboxes = utils.postprocess_boxes(pred_bbox, img_size, input_size, score_thresh)
-            bboxes = utils.nms(bboxes, iou_thresh, method='nms')
+            bboxes = utils.nms(bboxes, iou_type, iou_thresh, method='nms')
             
             if len(bboxes) > 0:
 	            image = utils.draw_bbox(img, bboxes) 

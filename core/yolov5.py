@@ -213,8 +213,9 @@ class YOLOV5(object):
         layer_num = layer_num + 3
         y76, layer_num = cspstage(y76, self.trainable, 256, 3, layer_num, 6, 28)
         
-        y76_output = conv(y76, (1, 1, 256, 3 * (self.num_class + 5)), trainable=self.trainable,
-                          name='conv_sbbox', downsample=True, activate=False, bn=False)
+        y76_downsample = conv(y76, (1, 1, 256, 256), trainable=self.trainable, name='downsample0', downsample=True)
+        y76_output = conv(y76_downsample, (1, 1, 256, 3 * (self.num_class + 5)), trainable=self.trainable,
+                          name='conv_sbbox', activate=False, bn=False)
 
 
         # 38x38 head/neck
@@ -227,8 +228,9 @@ class YOLOV5(object):
         layer_num = layer_num + 3
         y38, layer_num = cspstage(y38, self.trainable, 512, 3, layer_num, 7, 31)
         
-        y38_output = conv(y38, (1, 1, 512, 3 * (self.num_class + 5)), trainable=self.trainable,
-                          name='conv_sbbox', downsample=True, activate=False, bn=False)
+        y38_downsample = conv(y38, (1, 1, 512, 512), trainable=self.trainable, name='downsample1', downsaple=True)
+        y38_output = conv(y38_downsample, (1, 1, 512, 3 * (self.num_class + 5)), trainable=self.trainable,
+                          name='conv_mbbox', activate=False, bn=False)
 
 
         # 19x19 head/neck
@@ -241,8 +243,9 @@ class YOLOV5(object):
         layer_num = layer_num + 3
         y19, layer_num = cspstage(y19, self.trainable, 1024, 3, layer_num, 8, 34)
         
-        y19_output = conv(y19, (1, 1, 1024, 3 * (self.num_class + 5)), trainable=self.trainable,
-                          name='conv_sbbox', downsample=True, activate=False, bn=False)
+        y19_downsample = conv(y19, (1, 1, 1024, 1024), trainable=self.trainable, name='downsample2', downsaple=True)
+        y19_output = conv(y19_downsample, (1, 1, 1024, 3 * (self.num_class + 5)), trainable=self.trainable,
+                          name='conv_lbbox', activate=False, bn=False)
 
         return y19_output, y38_output, y76_output
 
