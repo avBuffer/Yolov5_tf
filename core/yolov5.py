@@ -120,30 +120,39 @@ def cspstage(input_data, trainable, filters, loop, layer_nums, route_nums, res_n
     return input_data, out_layer
 
 
-def cspdarknet53(input_data, trainable):
+def cspdarknet53(input_data, trainable, init_width_size, init_depth_size):
     """CSPDarknet53 body; source: https://arxiv.org/pdf/1911.11929.pdf
         param input_data: Input tensor
         param trainable: A bool parameter, True ==> training, False ==> not train.
     return: Three stage tensors"""
-    input_data = conv(input_data, (3, 3, 3, 64), trainable=trainable, name='conv0')
-    input_data = conv(input_data, (1, 1, 64, 128), trainable=trainable, name='conv1', downsample=True)
+    # for debug to print net layers' shape, need to remark while train/val/test phase
+    #input_data = tf.reshape(input_data, [-1, 608, 608, 3])
+
+    # 3x608x608 -> 64x608x608
+    input_data = conv(input_data, (3, 3, 3, init_width_size), trainable=trainable, name='conv0')
+    
+    # 64x608x608 -> 128x304x304
+    input_data = conv(input_data, (1, 1, init_width_size, 2*init_width_size), trainable=trainable, name='conv1', downsample=True)
 
     layer_num = 1
-    input_data, layer_num = cspstage(input_data, trainable, 128, 3, layer_num, 1, 1)
+    input_data, layer_num = cspstage(input_data, trainable, 2*init_width_size, init_depth_size, layer_num, 1, 1)
 
-    input_data = conv(input_data, (3, 3, 128, 256), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    # 128x304x304 -> 256x152x152
+    input_data = conv(input_data, (3, 3, 2*init_width_size, 4*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
     route_1 = input_data
 
     layer_num = layer_num + 1
-    input_data, layer_num = cspstage(input_data, trainable, 256, 9, layer_num, 2, 4)
+    input_data, layer_num = cspstage(input_data, trainable, 4*init_width_size, 3*init_depth_size, layer_num, 2, 1+init_depth_size)
 
-    input_data = conv(input_data, (3, 3, 256, 512), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    # 256x152x152 -> 512x76x76 
+    input_data = conv(input_data, (3, 3, 4*init_width_size, 8*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
     route_2 = input_data
 
     layer_num = layer_num + 1
-    input_data, layer_num = cspstage(input_data, trainable, 512, 9, layer_num, 3, 13)
+    input_data, layer_num = cspstage(input_data, trainable, 8*init_width_size, 3*init_depth_size, layer_num, 3, 1+4*init_depth_size)
 
-    input_data = conv(input_data, (3, 3, 512, 1024), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    # 512x76x76 -> 1024x38x38
+    input_data = conv(input_data, (3, 3, 8*init_width_size, 16*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
     route_3 = input_data
 
     #SPP
@@ -152,8 +161,10 @@ def cspdarknet53(input_data, trainable):
     maxpool3 = tf.nn.max_pool(input_data, [1, 5, 5, 1], [1, 1, 1, 1], 'SAME')
     input_data = tf.concat([maxpool1, maxpool2, maxpool3, input_data], axis=-1)
     
-    input_data = conv(input_data, (1, 1, 4096, 1024), trainable=trainable, name='conv%d' % (layer_num + 2), downsample=True)
-    return route_1, route_2, route_3, input_data
+    # 4096x38x38 -> 1024x38x38
+    input_data = conv(input_data, (1, 1, 64*init_width_size, 16*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 2), downsample=True)
+    last_layer_num = layer_num + 2
+    return route_1, route_2, route_3, input_data, last_layer_num
 
 
 class YOLOV5(object):
@@ -166,6 +177,9 @@ class YOLOV5(object):
         self.anchor_per_scale = cfg.YOLO.ANCHOR_PER_SCALE
         self.iou_loss_thresh = cfg.YOLO.IOU_LOSS_THRESH
         self.upsample_method = cfg.YOLO.UPSAMPLE_METHOD
+
+        self.width_scale = cfg.YOLO.WIDTH_SCALE_V5
+        self.depth_scale = cfg.YOLO.DEPTH_SCALE_V5
 
         try:
             self.conv_lbbox, self.conv_mbbox, self.conv_sbbox = self.__build_network(input_data)
@@ -183,68 +197,97 @@ class YOLOV5(object):
     def __build_network(self, input_data):
         """Build yolov5 body, including SPP, PAN, Yolov3/v4 Head/Neck.
            param input_data: Input tensor, return: Three stage outputs"""
-        route_1, route_2, route_3, input_data = cspdarknet53(input_data, self.trainable)
 
+        init_width_size = int(64 * self.width_scale)
+        if self.depth_scale == 0.33:
+            init_depth_size = 1
+        elif self.depth_scale == 0.67:
+            init_depth_size = 2
+        elif self.depth_scale == 1.33:
+            init_depth_size = 4
+        else:
+            init_depth_size = 3
+   
+        route_1, route_2, route_3, input_data, last_layer_num = cspdarknet53(input_data, self.trainable, init_depth_size, init_depth_size)
 
-        layer_num = 32
-        y19, layer_num = cspstage(input_data, self.trainable, 1024, 3, layer_num, 4, 22)
+        layer_num = last_layer_num
+        y19, layer_num = cspstage(input_data, self.trainable, 16*init_width_size, init_depth_size, layer_num, 4, 1+7*init_depth_size)
         
-        y19_1 = conv(y19, (1, 1, 1024, 512), self.trainable, name='conv%d' % (layer_num + 1))
+        # 1024x38x38 -> 512x38x38
+        y19_1 = conv(y19, (1, 1, 16*init_width_size, 8*init_width_size), self.trainable, name='conv%d' % (layer_num + 1))
+        
+        # 512x38x38 -> 512x76x76
         y19_upsample = upsample(y19_1, name='upsample0', method=self.upsample_method)
 
         with tf.variable_scope('route_0'):
-            y38 = conv(route_2, (1, 1, 512, 512), self.trainable, 'conv_route_0')
+            y38 = conv(route_2, (1, 1, 8*init_width_size, 8*init_width_size), self.trainable, 'conv_route_0')
             y38 = tf.concat([y38, y19_upsample], axis=-1)        
-        y38 = conv(y38, (1, 1, 1024, 512), self.trainable, name='conv%d' % (layer_num + 2))
+        
+        # 1024x76x76 -> 512x76x76
+        y38 = conv(y38, (1, 1, 16*init_width_size, 8*init_width_size), self.trainable, name='conv%d' % (layer_num + 2))
         
 
         # 76x76 head/neck
         layer_num = layer_num + 3
-        y38, layer_num = cspstage(y38, self.trainable, 512, 3, layer_num, 5, 25)
+        y38, layer_num = cspstage(y38, self.trainable, 8*init_width_size, init_depth_size, layer_num, 5, 1+8*init_depth_size)
 
-        y38_1 = conv(y38, (1, 1, 512, 256), self.trainable, name='conv%d' % (layer_num + 1))
+        # 512x76x76 -> 256x76x76
+        y38_1 = conv(y38, (1, 1, 8*init_width_size, 4*init_width_size), self.trainable, name='conv%d' % (layer_num + 1))
+        
+        # 256x76x76 -> 256x152x152
         y38_upsample = upsample(y38_1, name='upsample1', method=self.upsample_method)
 
         with tf.variable_scope('route_1'):
-            y76 = conv(route_1, (1, 1, 256, 256), self.trainable, 'conv_route_1')
+            y76 = conv(route_1, (1, 1, 4*init_width_size, 4*init_width_size), self.trainable, 'conv_route_1')
             y76 = tf.concat([y76, y38_upsample], axis=-1)
-        y76 = conv(y76, (1, 1, 512, 256), self.trainable, name='conv%d' % (layer_num + 2))
+        
+        # 512x152x152 -> 256x152x152
+        y76 = conv(y76, (1, 1, 8*init_width_size, 4*init_width_size), self.trainable, name='conv%d' % (layer_num + 2))
 
         layer_num = layer_num + 3
-        y76, layer_num = cspstage(y76, self.trainable, 256, 3, layer_num, 6, 28)
+        y76, layer_num = cspstage(y76, self.trainable, 4*init_width_size, init_depth_size, layer_num, 6, 1+9*init_depth_size)
         
-        y76_downsample = conv(y76, (1, 1, 256, 256), trainable=self.trainable, name='downsample0', downsample=True)
-        y76_output = conv(y76_downsample, (1, 1, 256, 3 * (self.num_class + 5)), trainable=self.trainable,
+        # 256x152x152 -> 256x76x76
+        y76_downsample = conv(y76, (1, 1, 4*init_width_size56, 4*init_width_size), trainable=self.trainable, name='downsample0', downsample=True)
+        y76_output = conv(y76_downsample, (1, 1, 4*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_sbbox', activate=False, bn=False)
 
 
         # 38x38 head/neck
-        y38_1 = conv(y76, (3, 3, 256, 256), self.trainable, name='conv%d' % (layer_num + 1), downsample=True)
+        # 256x152x152 -> 256x76x76
+        y38_1 = conv(y76, (3, 3, 4*init_width_size, 4*init_width_size), self.trainable, name='conv%d' % (layer_num + 1), downsample=True)
         with tf.variable_scope('route_2'):
-            y38 = conv(route_2, (1, 1, 512, 512), self.trainable, 'conv_route_2')
+            y38 = conv(route_2, (1, 1, 8*init_width_size, 8*init_width_size), self.trainable, 'conv_route_2')
             y38 = tf.concat([y38, y38_1], axis=-1)
-        y38 = conv(y38, (1, 1, 765, 512), self.trainable, name='conv%d' % (layer_num + 2))
+        
+        # 768x76x76 -> 512x76x76
+        y38 = conv(y38, (1, 1, 12*init_width_size, 8*init_width_size), self.trainable, name='conv%d' % (layer_num + 2))
 
         layer_num = layer_num + 3
-        y38, layer_num = cspstage(y38, self.trainable, 512, 3, layer_num, 7, 31)
+        y38, layer_num = cspstage(y38, self.trainable, 8*init_width_size, init_depth_size, layer_num, 7, 1+10*init_depth_size)
         
-        y38_downsample = conv(y38, (1, 1, 512, 512), trainable=self.trainable, name='downsample1', downsaple=True)
-        y38_output = conv(y38_downsample, (1, 1, 512, 3 * (self.num_class + 5)), trainable=self.trainable,
+        # 512x76x76 -> 512x38x38
+        y38_downsample = conv(y38, (1, 1, 8*init_width_size, 8*init_width_size12), trainable=self.trainable, name='downsample1', downsaple=True)
+        y38_output = conv(y38_downsample, (1, 1, 8*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_mbbox', activate=False, bn=False)
 
 
         # 19x19 head/neck
-        y19_1 = conv(y38, (3, 3, 256, 256), self.trainable, name='conv%d' % (layer_num + 1), downsample=True)
+        # 512x76x76 -> 512x38x38
+        y19_1 = conv(y38, (3, 3, 8*init_width_size, 8*init_width_size), self.trainable, name='conv%d' % (layer_num + 1), downsample=True)
         with tf.variable_scope('route_3'):
-            y19 = conv(route_3, (1, 1, 1024, 1024), self.trainable, 'conv_route_3')
+            y19 = conv(route_3, (1, 1, 16*init_width_size, 16*init_width_size), self.trainable, 'conv_route_3')
             y19 = tf.concat([y76, y19_1], axis=-1)
-        y19 = conv(y19, (1, 1, 2048, 1024), self.trainable, name='conv%d' % (layer_num + 2))
+        
+        # 1536x38x38 -> 1024x38x38
+        y19 = conv(y19, (1, 1, 24*init_width_size, 16*init_width_size), self.trainable, name='conv%d' % (layer_num + 2))
 
         layer_num = layer_num + 3
-        y19, layer_num = cspstage(y19, self.trainable, 1024, 3, layer_num, 8, 34)
+        y19, layer_num = cspstage(y19, self.trainable, 16*init_width_size, init_depth_size, layer_num, 8, 1+11*init_depth_size)
         
-        y19_downsample = conv(y19, (1, 1, 1024, 1024), trainable=self.trainable, name='downsample2', downsaple=True)
-        y19_output = conv(y19_downsample, (1, 1, 1024, 3 * (self.num_class + 5)), trainable=self.trainable,
+        # 1024x38x38 -> 1024x19x19
+        y19_downsample = conv(y19, (1, 1, 16*init_width_size, 16*init_width_size), trainable=self.trainable, name='downsample2', downsaple=True)
+        y19_output = conv(y19_downsample, (1, 1, 16*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_lbbox', activate=False, bn=False)
 
         return y19_output, y38_output, y76_output

@@ -22,6 +22,10 @@ __C.YOLO.STRIDES_TINY = [16, 32]
 __C.YOLO.ANCHOR_PER_SCALE = 3
 __C.YOLO.IOU_LOSS_THRESH = 0.5
 __C.YOLO.UPSAMPLE_METHOD = "resize"
+
+__C.YOLO.WIDTH_SCALE_V5 = 0.50 # yolov5 small:0.50 / middle:0.75 / large:1.00 / extend:1.25
+__C.YOLO.DEPTH_SCALE_V5 = 0.33 # yolov5 small:0.33(1/3) / middle:0.67(2/3) / large:1.00 / extend:1.33(4/3)
+
 __C.YOLO.ORIGINAL_WEIGHT = "./checkpoint/yolov3_coco.ckpt"
 __C.YOLO.DEMO_WEIGHT = "./checkpoint/yolov3_coco_demo.ckpt"
 
