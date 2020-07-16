@@ -54,9 +54,9 @@ def res_block(input_data, input_channel, filter_num1, filter_num2, trainable, na
     short_cut = input_data
     with tf.variable_scope(name):
         input_data = conv(input_data, filters_shape=(1, 1, input_channel, filter_num1),
-                          trainable=trainable, name='conv1')
+                          trainable=trainable, name='conv1', act_fun='mish')
         input_data = conv(input_data, filters_shape=(3, 3, filter_num1, filter_num2),
-                          trainable=trainable, name='conv2',  )
+                          trainable=trainable, name='conv2', act_fun='mish')
         residual_ouput = input_data + short_cut
     return residual_ouput
 
@@ -76,28 +76,8 @@ def upsample(input_data, name, method='deconv'):
     return output
 
 
-def cspfirst_stage(input_data, trainable, filters):
-    """First csp stage.
-        param input_data: The input tensor
-        param trainable: A bool parameter, True ==> training, False ==> not train.
-        param filters: Filter nums
-    return: Output tensors and the last Conv layer counter of this stage"""
-    c = filters
-    route = input_data
-    route = conv(route, (1, 1, c, c), trainable=trainable, name='conv2')
-    input_data = conv(input_data, (1, 1, c, c), trainable=trainable, name='conv3')
-    
-    for i in range(1):
-        input_data = res_block(input_data, c, c / 2, c, trainable=trainable, name='residual%d' % (i + 0))
-    
-    input_data = conv(input_data, (1, 1, c, c), trainable=trainable, name='conv6')
-    input_data = tf.concat([input_data, route], axis=-1)
-    layer_nums = 6
-    return input_data, layer_nums
-
-
 def cspstage(input_data, trainable, filters, loop, layer_nums, route_nums, res_nums):
-    """CSPNets stage
+    '''CSPNets stage
         param input_data: The input tensor
         param trainable: A bool parameter, True ==> training, False ==> not train.
         param filters: Filter nums
@@ -105,54 +85,58 @@ def cspstage(input_data, trainable, filters, loop, layer_nums, route_nums, res_n
         param layer_nums: Counter of Conv layers
         param route_nums: Counter of route nums
         param res_nums: Counter of ResBlock nums
-    return: Output tensors and the last Conv layer counter of this stage"""
+    return: Output tensors and the last Conv layer counter of this stage'''
     c = filters
     out_layer = layer_nums + 1 + loop + 1
     route = input_data
-    route = conv(route, (1, 1, c, c / 2), trainable=trainable, name='conv_route%d' % route_nums)
-    input_data = conv(input_data, (1, 1, c, c / 2), trainable=trainable, name='conv%d' % (layer_nums + 1))
+    route = conv(route, (1, 1, c, c / 2), trainable=trainable, name='conv_route%d' % route_nums, act_fun='mish')
+    input_data = conv(input_data, (1, 1, c, c / 2), trainable=trainable, name='conv%d' % (layer_nums + 1), act_fun='mish')
     
     for i in range(loop):
         input_data = res_block(input_data, c / 2, c / 2, c / 2, trainable=trainable, name='residual%d' % (i + res_nums))
     
-    input_data = conv(input_data, (1, 1, c / 2, c / 2), trainable=trainable, name='conv%d' % out_layer)
+    input_data = conv(input_data, (1, 1, c / 2, c / 2), trainable=trainable, name='conv%d' % out_layer, act_fun='mish')
     input_data = tf.concat([input_data, route], axis=-1)
     return input_data, out_layer
 
 
 def cspdarknet53(input_data, trainable, init_width_size, init_depth_size):
-    """CSPDarknet53 body; source: https://arxiv.org/pdf/1911.11929.pdf
+    '''CSPDarknet53 body; source: https://arxiv.org/pdf/1911.11929.pdf
         param input_data: Input tensor
         param trainable: A bool parameter, True ==> training, False ==> not train.
-    return: Three stage tensors"""
+    return: Three stage tensors'''
     # for debug to print net layers' shape, need to remark while train/val/test phase
     #input_data = tf.reshape(input_data, [-1, 608, 608, 3])
 
     # 3x608x608 -> 64x608x608
-    input_data = conv(input_data, (3, 3, 3, init_width_size), trainable=trainable, name='conv0')
+    input_data = conv(input_data, (3, 3, 3, init_width_size), trainable=trainable, name='conv0', act_fun='mish')
     
     # 64x608x608 -> 128x304x304
-    input_data = conv(input_data, (1, 1, init_width_size, 2*init_width_size), trainable=trainable, name='conv1', downsample=True)
+    input_data = conv(input_data, (1, 1, init_width_size, 2*init_width_size), trainable=trainable, name='conv1',
+                      downsample=True, act_fun='mish')
 
     layer_num = 1
     input_data, layer_num = cspstage(input_data, trainable, 2*init_width_size, init_depth_size, layer_num, 1, 1)
 
     # 128x304x304 -> 256x152x152
-    input_data = conv(input_data, (3, 3, 2*init_width_size, 4*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    input_data = conv(input_data, (3, 3, 2*init_width_size, 4*init_width_size), trainable=trainable, 
+                      name='conv%d' % (layer_num + 1), downsample=True, act_fun='mish')
     route_1 = input_data
 
     layer_num = layer_num + 1
     input_data, layer_num = cspstage(input_data, trainable, 4*init_width_size, 3*init_depth_size, layer_num, 2, 1+init_depth_size)
 
     # 256x152x152 -> 512x76x76 
-    input_data = conv(input_data, (3, 3, 4*init_width_size, 8*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    input_data = conv(input_data, (3, 3, 4*init_width_size, 8*init_width_size), trainable=trainable, 
+                      name='conv%d' % (layer_num + 1), downsample=True, act_fun='mish')
     route_2 = input_data
 
     layer_num = layer_num + 1
     input_data, layer_num = cspstage(input_data, trainable, 8*init_width_size, 3*init_depth_size, layer_num, 3, 1+4*init_depth_size)
 
     # 512x76x76 -> 1024x38x38
-    input_data = conv(input_data, (3, 3, 8*init_width_size, 16*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 1), downsample=True)
+    input_data = conv(input_data, (3, 3, 8*init_width_size, 16*init_width_size), trainable=trainable,
+                      name='conv%d' % (layer_num + 1), downsample=True, act_fun='mish')
     route_3 = input_data
 
     #SPP
@@ -162,7 +146,8 @@ def cspdarknet53(input_data, trainable, init_width_size, init_depth_size):
     input_data = tf.concat([maxpool1, maxpool2, maxpool3, input_data], axis=-1)
     
     # 4096x38x38 -> 1024x38x38
-    input_data = conv(input_data, (1, 1, 64*init_width_size, 16*init_width_size), trainable=trainable, name='conv%d' % (layer_num + 2), downsample=True)
+    input_data = conv(input_data, (1, 1, 64*init_width_size, 16*init_width_size), trainable=trainable, 
+                      name='conv%d' % (layer_num + 2), downsample=True, act_fun='mish')
     last_layer_num = layer_num + 2
     return route_1, route_2, route_3, input_data, last_layer_num
 
@@ -195,8 +180,8 @@ class YOLOV5(object):
 
 
     def __build_network(self, input_data):
-        """Build yolov5 body, including SPP, PAN, Yolov3/v4 Head/Neck.
-           param input_data: Input tensor, return: Three stage outputs"""
+        '''Build yolov5 body, including SPP, PAN, Yolov3/v4 Head/Neck.
+           param input_data: Input tensor, return: Three stage outputs'''
 
         init_width_size = int(64 * self.width_scale)
         if self.depth_scale == 0.33:
@@ -294,11 +279,11 @@ class YOLOV5(object):
 
 
     def decode(self, conv_ouput, anchors, strides):
-        """Decode yolov5, use sigmoid decode conv_output.
+        '''Decode yolov5, use sigmoid decode conv_output.
             param conv_ouput: The output of yolov5 body.
             param anchors: The anchors
             param strides: Three dimensions, default [8, 16, 32]
-        return: The predict of conv_output"""
+        return: The predict of conv_output'''
         conv_shape = tf.shape(conv_ouput)
         batch_size = conv_shape[0]
         output_size = conv_shape[1]
@@ -327,10 +312,10 @@ class YOLOV5(object):
 
 
     def bbox_iou(self, boxes1, boxes2):
-        """Calculate bbox iou; source:
+        '''Calculate bbox iou; source:
             param boxes1: Tensor, shape=(i1,...,iN, 4), xywh
             param boxes2: Tensor, shape=(j, 4), xywh
-        return: Tensor, shape=(i1,...,iN, j)"""
+        return: Tensor, shape=(i1,...,iN, j)'''
         boxes1_area = boxes1[..., 2] * boxes1[..., 3]
         boxes2_area = boxes2[..., 2] * boxes2[..., 3]
 
@@ -349,10 +334,10 @@ class YOLOV5(object):
 
 
     def bbox_giou(self, boxes1, boxes2):
-        """Calculate giou loss; source: https://arxiv.org/abs/1902.09630
+        '''Calculate giou loss; source: https://arxiv.org/abs/1902.09630
             param boxes1: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
             param boxes2: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)"""
+        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)'''
         boxes1 = tf.concat([boxes1[..., :2] - boxes1[..., 2:] * 0.5, boxes1[..., :2] + boxes1[..., 2:] * 0.5], axis=-1)
         boxes2 = tf.concat([boxes2[..., :2] - boxes2[..., 2:] * 0.5, boxes2[..., :2] + boxes2[..., 2:] * 0.5], axis=-1)
 
@@ -380,10 +365,10 @@ class YOLOV5(object):
 
 
     def bbox_diou(self, boxes1, boxes2):
-        """Calculate diou; source: https://arxiv.org/pdf/1911.08287v1.pdf
+        '''Calculate diou; source: https://arxiv.org/pdf/1911.08287v1.pdf
             param boxes1: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
             param boxes2: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)"""
+        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)'''
         boxes1_center, boxes2_center = boxes1[..., :2], boxes2[..., :2]
         boxes1 = tf.concat([boxes1[..., :2] - boxes1[..., 2:] * 0.5, boxes1[..., :2] + boxes1[..., 2:] * 0.5], axis=-1)
         boxes2 = tf.concat([boxes2[..., :2] - boxes2[..., 2:] * 0.5, boxes2[..., :2] + boxes2[..., 2:] * 0.5], axis=-1)
@@ -413,10 +398,10 @@ class YOLOV5(object):
 
 
     def bbox_ciou(self, boxes1, boxes2):
-        """Calculate ciou; source: https://arxiv.org/pdf/1911.08287v1.pdf
+        '''Calculate ciou; source: https://arxiv.org/pdf/1911.08287v1.pdf
             param boxes1: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
             param boxes2: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)"""
+        return: Tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)'''
         boxes1_1, boxes2_1 = boxes1, boxes2
         boxes1_center, boxes2_center = boxes1[..., :2], boxes2[..., :2]
 
@@ -452,18 +437,18 @@ class YOLOV5(object):
 
 
     def focal_loss(self, y_true, y_pred, gamma=2.0, alpha=1):
-        """Compute focal loss; source:https://arxiv.org/abs/1708.02002
+        '''Compute focal loss; source:https://arxiv.org/abs/1708.02002
             param y_true: Ground truth targets, tensor of shape (?, num_boxes, num_classes).
             param y_pred: Predicted logits, tensor of shape (?, num_boxes, num_classes).
             param gamma: Exponent of the modulating factor (1 - p_t) ^ gamma.
             param alpha: Optional alpha weighting factor to balance positives vs negatives.
-        return: Focal factor"""
+        return: Focal factor'''
         focal_loss = alpha * tf.pow(tf.abs(y_true - y_pred), gamma)
         return focal_loss
 
 
     def _label_smoothing(self, y_true, label_smoothing):
-        """Label smoothing. source: https://arxiv.org/pdf/1906.02629.pdf"""
+        '''Label smoothing. source: https://arxiv.org/pdf/1906.02629.pdf'''
         label_smoothing = tf.constant(label_smoothing, dtype=tf.float32)
         #return y_true * (1.0 - label_smoothing) + 0.5 * label_smoothing
         
@@ -476,7 +461,7 @@ class YOLOV5(object):
 
 
     def yolov5_loss(self, conv, pred, label, bboxes, stride, iou_use=1, focal_use=False, label_smoothing=0):
-        """Reture yolov5_loss tensor.
+        '''Reture yolov5_loss tensor.
             param conv: The outputs of yolov5 body, conv_sbbox, conv_mbbox, conv_lbbox
             param pred: The outputs of decode, pred_sbbox, pred_mbbox, pred_lbbox
             param label: The input label boxes
@@ -485,7 +470,7 @@ class YOLOV5(object):
             param iou_use: The iou loss (0, 1, 2) ==> (giou, diou, ciou)
             param focal_use: The focal loss  (0, 1, 2) ==> (normal, sigmoid_focal, focal)
             param label_smoothing: The label smoothing
-        return: Tensor, shape=(1,)"""
+        return: Tensor, shape=(1,)'''
         conv_shape = tf.shape(conv)
         batch_size = conv_shape[0]
         output_size = conv_shape[1]
@@ -538,7 +523,7 @@ class YOLOV5(object):
 
 
     def compute_loss(self, label_sbbox, label_mbbox, label_lbbox, true_sbbox, true_mbbox, true_lbbox, iou_use, focal_use, label_smoothing):
-        """Compute loss; location loss, confidence loss, class prob loss """
+        '''Compute loss; location loss, confidence loss, class prob loss '''
         with tf.name_scope('smaller_box_loss'):
             loss_sbbox = self.yolov5_loss(self.conv_sbbox, self.pred_sbbox, label_sbbox, true_sbbox, stride=self.strides[0],
                                           iou_use=iou_use, focal_use=focal_use, label_smoothing=label_smoothing)        

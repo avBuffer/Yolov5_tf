@@ -14,7 +14,7 @@ from PIL import Image
 if __name__ == '__main__':
     argv = sys.argv
     if len(argv) < 5:
-        print('usage: python show_layer_img.py gpu_id pb_file img_file out_path')
+        print('usage: python show_layer_feature_map.py gpu_id pb_file img_file out_path')
         sys.exit()
 
     gpu_id = argv[1]
@@ -33,7 +33,8 @@ if __name__ == '__main__':
     out_path = argv[4]
     if not os.path.exists(out_path):
         os.makedirs(out_path)
-    print('show_layer_img gpu_id=%s, pb_file=%s, img_file=%s, out_path=%s' % (gpu_id, pb_file, img_file, out_path))
+    print('show_layer_feature_map gpu_id=%s, pb_file=%s, img_file=%s, out_path=%s' % 
+         (gpu_id, pb_file, img_file, out_path))
     
     input_size = 416
     img = cv2.imread(img_file)
@@ -57,7 +58,8 @@ if __name__ == '__main__':
             features = np.array(conv.eval({return_tensors[0]: image_data}))
             print('\n[%d/%d] %s' % (idx, len(conv_layer_names), layer_name), ' features.shape=', features.shape)
 
-            out_layer_path = os.path.join(out_path, '%s-%s' % (layer_name.replace('/', '_'), str(features.shape[3])))
+            out_layer_path = os.path.join(out_path, '%s-%sx%sx%s' % (layer_name.replace('/', '_'), str(features.shape[1]), 
+                                                                     str(features.shape[2]), str(features.shape[3])))
             if not os.path.exists(out_layer_path):
                 os.makedirs(out_layer_path)
 
