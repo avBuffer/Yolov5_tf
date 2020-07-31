@@ -1,5 +1,4 @@
 import tensorflow as tf
-from core.yolov3 import YOLOV3
 from core.yolov4 import YOLOV4
 from from_darknet_weights_to_ckpt import load_weights
 
