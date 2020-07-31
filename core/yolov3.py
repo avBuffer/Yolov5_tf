@@ -38,7 +38,7 @@ class YOLOV3(object):
     def __build_nework(self, input_data):
         assert self.net_type in ['darknet53', 'mobilenetv2']
 
-        if self.net_type == 'darknet53'
+        if self.net_type == 'darknet53':
             route_1, route_2, input_data = backbone.darknet53(input_data, self.trainable)
 
             input_data = common.convolutional(input_data, (1, 1, 1024, 512), self.trainable, 'conv52')

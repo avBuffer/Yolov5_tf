@@ -114,7 +114,7 @@ def bboxes_giou(boxes1, boxes2):
     
     left_up_min = np.minimum(boxes1[..., :2], boxes2[..., :2])
     right_down_max = np.maximum(boxes1[..., 2:], boxes2[..., 2:])
-    c_area left_up_min * right_down_max
+    c_area = left_up_min * right_down_max
 
     giou_term = (c_area - union_area) / c_area
     return iou - giou_term
