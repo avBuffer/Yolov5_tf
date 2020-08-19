@@ -19,7 +19,7 @@ Loss: DIOU CIOU[[5]](https://arxiv.org/pdf/1911.08287v1.pdf), Focal_Loss[[6]](ht
 
 Python 3.6.8
 
-Tensorflow 1.13.1
+Tensorflow 1.13.1 or Tensorflow 2.0 up
 
 ## Quick Start
 
