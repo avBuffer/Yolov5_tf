@@ -77,7 +77,7 @@ if __name__ == '__main__':
             img_files = os.listdir(img_path_file)
             for idx, img_file in enumerate(img_files):
                 in_img_file = os.path.join(img_path_file, img_file)
-                if not.os.path.exist(in_img_file):
+                if not os.path.exist(in_img_file):
                     continue
             
             img = cv2.imread(img_files)            

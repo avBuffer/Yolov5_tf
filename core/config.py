@@ -13,9 +13,9 @@ __C.YOLO = edict()
 
 
 # Set the class name
-__C.YOLO.NET_TYPE = 'darknet53' # 'darknet53' 'mobilenetv2'
-__C.YOLO.CLASSES = './data/classes/coco.names'
-__C.YOLO.ANCHORS = './data/anchors/coco_anchors.txt' # yolov3/5 : yolo_anchors.txt; yolov4 : yolov4_anchors.txt
+__C.YOLO.NET_TYPE = 'mobilenetv2' # 'darknet53' 'mobilenetv2'
+__C.YOLO.CLASSES = 'data/classes/mosegg.names'
+__C.YOLO.ANCHORS = 'data/anchors/basline_anchors.txt' # yolov3/5 : yolo_anchors.txt; yolov4 : yolov4_anchors.txt
 __C.YOLO.MOVING_AVE_DECAY = 0.9995
 __C.YOLO.STRIDES = [8, 16, 32]
 __C.YOLO.STRIDES_TINY = [16, 32]
@@ -26,37 +26,37 @@ __C.YOLO.UPSAMPLE_METHOD = 'resize'
 __C.YOLO.WIDTH_SCALE_V5 = 0.50 # yolov5 small:0.50 / middle:0.75 / large:1.00 / extend:1.25
 __C.YOLO.DEPTH_SCALE_V5 = 0.33 # yolov5 small:0.33(1/3) / middle:0.67(2/3) / large:1.00 / extend:1.33(4/3)
 
-__C.YOLO.ORIGINAL_WEIGHT = './checkpoint/yolov3_coco.ckpt'
-__C.YOLO.DEMO_WEIGHT = './checkpoint/yolov3_coco_demo.ckpt'
+__C.YOLO.ORIGINAL_WEIGHT = 'checkpoint/yolov3_coco.ckpt'
+__C.YOLO.DEMO_WEIGHT = 'checkpoint/yolov3_coco_demo.ckpt'
 
 
 # Train options
 __C.TRAIN = edict()
 
-__C.TRAIN.ANNOT_PATH = './data/COCO/2017/train.txt'
-__C.TRAIN.BATCH_SIZE = 16 if __C.YOLO.NET_TYPE == 'mobilenetv2' else 4
+__C.TRAIN.ANNOT_PATH = 'D:/datasets/MosEggs/mosegg_train.txt'
+__C.TRAIN.BATCH_SIZE = 8 if __C.YOLO.NET_TYPE == 'mobilenetv2' else 2
 __C.TRAIN.INPUT_SIZE = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
 __C.TRAIN.DATA_AUG = True
 __C.TRAIN.LEARN_RATE_INIT = 1e-4
-__C.TRAIN.LEARN_RATE_END = 1e-6
+__C.TRAIN.LEARN_RATE_END = 1e-8
 __C.TRAIN.WARMUP_EPOCHS = 2
 __C.TRAIN.FISRT_STAGE_EPOCHS = 20
 __C.TRAIN.SECOND_STAGE_EPOCHS = 30
-__C.TRAIN.INITIAL_WEIGHT = './weights/yolov4_coco.ckpt'
-__C.TRAIN.CKPT_PATH = './checkpoint'
+__C.TRAIN.INITIAL_WEIGHT = 'weights/yolov4_coco.ckpt'
+__C.TRAIN.CKPT_PATH = 'cpkts'
 
 
 # TEST options
 __C.TEST = edict()
 
-__C.TEST.ANNOT_PATH = './data/dataset/voc_test.txt'
+__C.TEST.ANNOT_PATH = 'D:/datasets/MosEggs/mosegg_val.txt'
 __C.TEST.BATCH_SIZE = 2
 __C.TEST.INPUT_SIZE = 416
 __C.TEST.DATA_AUG = False
 __C.TEST.WRITE_IMAGE = True
-__C.TEST.WRITE_IMAGE_PATH = './data/detection/'
+__C.TEST.WRITE_IMAGE_PATH = 'data/detection/'
 __C.TEST.WRITE_IMAGE_SHOW_LABEL = True
-__C.TEST.WEIGHT_FILE = './checkpoint/yolov3_test_loss=9.2099.ckpt-5'
+__C.TEST.WEIGHT_FILE = 'cpkts/yolov3_test_loss=9.2099.ckpt-5'
 __C.TEST.SHOW_LABEL = True
 __C.TEST.SCORE_THRESHOLD = 0.3
 __C.TEST.IOU_THRESHOLD = 0.45

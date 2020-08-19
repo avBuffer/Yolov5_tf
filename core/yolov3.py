@@ -1,16 +1,22 @@
 #! /usr/bin/env python
 # coding=utf-8
 import numpy as np
-import tensorflow as tf
 import core.utils as utils
 import core.common as common
 import core.backbone as backbone
 from core.config import cfg
 
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 
 class YOLOV3(object):
     def __init__(self, input_data, trainable):
-        self.net_type = cfg.NET_TYPE
+        self.net_type = cfg.YOLO.NET_TYPE
         self.trainable = trainable
         self.classes = utils.read_class_names(cfg.YOLO.CLASSES)
         self.num_class = len(self.classes)
@@ -38,7 +44,7 @@ class YOLOV3(object):
     def __build_nework(self, input_data):
         assert self.net_type in ['darknet53', 'mobilenetv2']
 
-        if self.net_type == 'darknet53'
+        if self.net_type == 'darknet53':
             route_1, route_2, input_data = backbone.darknet53(input_data, self.trainable)
 
             input_data = common.convolutional(input_data, (1, 1, 1024, 512), self.trainable, 'conv52')
@@ -86,7 +92,7 @@ class YOLOV3(object):
 
         
         elif self.net_type == 'mobilenetv2':
-            route_1, route_2, input_data = backbone.darknet53(input_data, self.trainable)
+            route_1, route_2, input_data = backbone.mobilenetv2(input_data, self.trainable)
 
             input_data = common.convolutional(input_data, (1, 1, 320, 160), self.trainable, 'conv18')
             input_data = common.convolutional(input_data, (3, 3, 160, 320), self.trainable, 'conv19')
@@ -153,9 +159,9 @@ class YOLOV3(object):
         xy_grid = tf.cast(xy_grid, tf.float32)
 
         pred_xy = (tf.sigmoid(conv_raw_dxdy) + xy_grid) * stride
-        pred_wh = (tf.exp(conv_raw_dwdh) * anchors) * stride
-        
+        pred_wh = tf.exp(conv_raw_dwdh) * anchors * stride        
         pred_xywh = tf.concat([pred_xy, pred_wh], axis=-1)
+
         pred_conf = tf.sigmoid(conv_raw_conf)
         pred_prob = tf.sigmoid(conv_raw_prob)
         return tf.concat([pred_xywh, pred_conf, pred_prob], axis=-1)
@@ -188,7 +194,7 @@ class YOLOV3(object):
         enclose_right_down = tf.maximum(boxes1[..., 2:], boxes2[..., 2:])
         enclose = tf.maximum(enclose_right_down - enclose_left_up, 0.0)
         enclose_area = enclose[..., 0] * enclose[..., 1]
-        
+
         giou = iou - 1.0 * (enclose_area - union_area) / enclose_area
         return giou
 
@@ -212,11 +218,11 @@ class YOLOV3(object):
 
 
     def loss_layer(self, conv, pred, label, bboxes, anchors, stride):
-        conv_shape  = tf.shape(conv)
-        batch_size  = conv_shape[0]
+        conv_shape = tf.shape(conv)
+        batch_size = conv_shape[0]
         output_size = conv_shape[1]
-        input_size  = stride * output_size
-        
+        input_size = stride * output_size
+
         conv = tf.reshape(conv, (batch_size, output_size, output_size, self.anchor_per_scale, 5 + self.num_class))
         conv_raw_conf = conv[:, :, :, :, 4:5]
         conv_raw_prob = conv[:, :, :, :, 5:]

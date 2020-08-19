@@ -1,6 +1,11 @@
 #! /usr/bin/env python
 # coding=utf-8
-import tensorflow as tf
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
 
 
 def convolutional(input_data, filters_shape, trainable, name, downsample=False, activate=True, bn=True):

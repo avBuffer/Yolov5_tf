@@ -10,7 +10,7 @@ import tensorflow as tf
 from PIL import Image
 
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     pb_file = "./checkpoint/yolov4.pb"
     video_path = "./data/images/road.mp4"
     # video_path = 0

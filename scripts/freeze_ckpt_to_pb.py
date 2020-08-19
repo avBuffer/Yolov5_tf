@@ -29,11 +29,11 @@ if __name__ == "__main__":
     with tf.name_scope('input'):
         input_data = tf.placeholder(dtype=tf.float32, name='input_data')
 
-    if net_type == 'yolov3'：
+    if net_type == 'yolov3':
         model = YOLOV3(input_data, trainable=False)
-    elif net_type == 'yolov4'：
+    elif net_type == 'yolov4':
         model = YOLOV4(input_data, trainable=False)
-    elif net_type == 'yolov5'：
+    elif net_type == 'yolov5':
         model = YOLOV5(input_data, trainable=False)
     else:
         print('net_type=', net_type, ' error')

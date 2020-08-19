@@ -34,29 +34,29 @@ class YOLOV3Tiny(object):
 
     def __build_nework(self, input_data):
         # backbone
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 3, 16), self.trainable, name='conv0')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 3, 16), trainable=self.trainable, name='conv0')
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 16, 32), self.trainable, name='conv1')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 16, 32), trainable=self.trainable, name='conv1')
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 32, 64), self.trainable, name='conv2')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 32, 64), trainable=self.trainable, name='conv2')
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
  
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 64, 128), self.trainable, name='conv3')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 64, 128), trainable=self.trainable, name='conv3')
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 128, 256), self.trainable, name='conv4')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 128, 256), trainable=self.trainable, name='conv4')
         route = input_data
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 256, 512), self.trainable, name='conv5')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 256, 512), trainable=self.trainable, name='conv5')
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-        input_data = common.convolutional(input_data, filters_shape=(3, 3, 512, 1024), self.trainable, name='conv6')
+        input_data = common.convolutional(input_data, filters_shape=(3, 3, 512, 1024), trainable=self.trainable, name='conv6')
         # end 
 
-        input_data = common.convolutional(input_data, filters_shape=(1, 1, 1024, 256), self.trainable, name='conv7')
+        input_data = common.convolutional(input_data, filters_shape=(1, 1, 1024, 256), trainable=self.trainable, name='conv7')
 
         conv_lobj_branch = common.convolutional(input_data, (3, 3, 256, 512), self.trainable, name='conv_lobj_branch')
         conv_lbbox = common.convolutional(conv_lobj_branch, (1, 1, 512, 3 * (self.num_class + 5)),

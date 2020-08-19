@@ -46,7 +46,7 @@ if __name__ == '__main__':
     return_tensors = utils.read_pb_return_tensors(graph, pb_file, return_elements)
 
     with tf.Session(graph=graph) as sess:
-        tensor_names = [tensor_name for tensor in tf.get_default_graph().as_graph_def().node]
+        tensor_names = [tensor.name for tensor in tf.get_default_graph().as_graph_def().node]
         conv_layer_names = []
         for idx, tensor_name in enumerate(tensor_names):
             if 'Conv2D' in tensor_name:
@@ -64,7 +64,7 @@ if __name__ == '__main__':
                 os.makedirs(out_layer_path)
 
             plt.figure(idx, figsize=(10, 10))
-            for jdx in range(features.shape[3])
+            for jdx in range(features.shape[3]):
                 plt.matshow(features[0, :, :, jdx], cmap=plt.cm.gray, fignum=idx) #remove cmap=plt.cm.gray to show RGBA image
                 plt.title('' + layer_name + '_' + str(jdx))
 

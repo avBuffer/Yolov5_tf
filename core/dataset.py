@@ -75,7 +75,9 @@ class Dataset(object):
             if self.batch_count < self.num_batchs:
                 while num < self.batch_size:
                     index = self.batch_count * self.batch_size + num
-                    if index >= self.num_samples: index -= self.num_samples
+                    if index >= self.num_samples:
+                        index -= self.num_samples
+
                     annotation = self.annotations[index]
                     image, bboxes = self.parse_annotation(annotation)                    
                     batch_image[num, :, :, :] = image

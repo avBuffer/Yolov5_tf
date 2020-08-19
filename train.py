@@ -5,7 +5,6 @@ import os
 import time
 import shutil
 import numpy as np
-import tensorflow as tf
 import core.utils as utils
 from tqdm import tqdm
 from core.dataset import Dataset
@@ -14,6 +13,14 @@ from core.yolov3 import YOLOV3
 from core.yolov4 import YOLOV4
 from core.yolov5 import YOLOV5
 from core.config import cfg
+
+import tensorflow
+print('tensorflow.version=', tensorflow.__version__)
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
 
 
 class YoloTrain(object):
@@ -32,7 +39,7 @@ class YoloTrain(object):
         
         self.ckpt_path = cfg.TRAIN.CKPT_PATH        
         if not os.path.exists(self.ckpt_path):
-            os.makdirs(self.ckpt_path)
+            os.makedirs(self.ckpt_path)
         
         self.time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
         self.moving_ave_decay = cfg.YOLO.MOVING_AVE_DECAY
@@ -45,7 +52,10 @@ class YoloTrain(object):
         self.trainset = Dataset('train', self.net_type)
         self.testset = Dataset('test', self.net_type)
         self.steps_per_period = len(self.trainset)
-        self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
 
         with tf.name_scope('input'):
             if net_type == 'tiny':
@@ -124,10 +134,10 @@ class YoloTrain(object):
                 
                 if net_type == 'tiny':
                     bboxes = ['conv_sbbox', 'conv_mbbox', 'conv_lbbox']
-                else
+                else:
                     bboxes = ['conv_mbbox', 'conv_lbbox']
                 
-                if var_name_mess[0] inbboxes:
+                if var_name_mess[0] in bboxes:
                     self.first_stage_trainable_var_list.append(var)
 
             first_stage_optimizer = tf.train.AdamOptimizer(self.learn_rate).minimize(self.loss, var_list=self.first_stage_trainable_var_list)
@@ -241,13 +251,15 @@ class YoloTrain(object):
 
 
 if __name__ == '__main__':
+    """
     argv = sys.argv
     if len(argv) < 3:
         print('usage: python train.py gpu_id net_type(yolov5/yolov4/yolov3/tiny)')
         sys.exit()
 
-    gpu_id = argv[1]
-    net_type = argv[2] 
+    """
+    gpu_id = 0 #argv[1]
+    net_type = 'yolov3' #argv[2]
     print('train gpu_id=%s, net_type=%s' % (gpu_id, net_type))
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
