@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import tensorflow as tf
 from core import utils
 from core.config import cfg
+
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
 
 
 def mish(inputs):
@@ -89,13 +95,13 @@ def cspstage(input_data, trainable, filters, loop, layer_nums, route_nums, res_n
     c = filters
     out_layer = layer_nums + 1 + loop + 1
     route = input_data
-    route = conv(route, (1, 1, c, c / 2), trainable=trainable, name='conv_route%d' % route_nums, act_fun='mish')
-    input_data = conv(input_data, (1, 1, c, c / 2), trainable=trainable, name='conv%d' % (layer_nums + 1), act_fun='mish')
+    route = conv(route, (1, 1, c, int(c / 2)), trainable=trainable, name='conv_route%d' % route_nums, act_fun='mish')
+    input_data = conv(input_data, (1, 1, c, int(c / 2)), trainable=trainable, name='conv%d' % (layer_nums + 1), act_fun='mish')
     
     for i in range(loop):
-        input_data = res_block(input_data, c / 2, c / 2, c / 2, trainable=trainable, name='residual%d' % (i + res_nums))
+        input_data = res_block(input_data, int(c / 2), int(c / 2), int(c / 2), trainable=trainable, name='residual%d' % (i + res_nums))
     
-    input_data = conv(input_data, (1, 1, c / 2, c / 2), trainable=trainable, name='conv%d' % out_layer, act_fun='mish')
+    input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='conv%d' % out_layer, act_fun='mish')
     input_data = tf.concat([input_data, route], axis=-1)
     return input_data, out_layer
 
@@ -193,7 +199,7 @@ class YOLOV5(object):
         else:
             init_depth_size = 3
    
-        route_1, route_2, route_3, input_data, last_layer_num = cspdarknet53(input_data, self.trainable, init_depth_size, init_depth_size)
+        route_1, route_2, route_3, input_data, last_layer_num = cspdarknet53(input_data, self.trainable, init_width_size, init_depth_size)
 
         layer_num = last_layer_num
         y19, layer_num = cspstage(input_data, self.trainable, 16*init_width_size, init_depth_size, layer_num, 4, 1+7*init_depth_size)
@@ -233,7 +239,7 @@ class YOLOV5(object):
         y76, layer_num = cspstage(y76, self.trainable, 4*init_width_size, init_depth_size, layer_num, 6, 1+9*init_depth_size)
         
         # 256x152x152 -> 256x76x76
-        y76_downsample = conv(y76, (1, 1, 4*init_width_size56, 4*init_width_size), trainable=self.trainable, name='downsample0', downsample=True)
+        y76_downsample = conv(y76, (1, 1, 4*init_width_size, 4*init_width_size), trainable=self.trainable, name='downsample0', downsample=True)
         y76_output = conv(y76_downsample, (1, 1, 4*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_sbbox', activate=False, bn=False)
 
@@ -252,7 +258,7 @@ class YOLOV5(object):
         y38, layer_num = cspstage(y38, self.trainable, 8*init_width_size, init_depth_size, layer_num, 7, 1+10*init_depth_size)
         
         # 512x76x76 -> 512x38x38
-        y38_downsample = conv(y38, (1, 1, 8*init_width_size, 8*init_width_size12), trainable=self.trainable, name='downsample1', downsaple=True)
+        y38_downsample = conv(y38, (1, 1, 8*init_width_size, 8*init_width_size), trainable=self.trainable, name='downsample1', downsample=True)
         y38_output = conv(y38_downsample, (1, 1, 8*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_mbbox', activate=False, bn=False)
 
@@ -262,7 +268,7 @@ class YOLOV5(object):
         y19_1 = conv(y38, (3, 3, 8*init_width_size, 8*init_width_size), self.trainable, name='conv%d' % (layer_num + 1), downsample=True)
         with tf.variable_scope('route_3'):
             y19 = conv(route_3, (1, 1, 16*init_width_size, 16*init_width_size), self.trainable, 'conv_route_3')
-            y19 = tf.concat([y76, y19_1], axis=-1)
+            y19 = tf.concat([y19, y19_1], axis=-1)
         
         # 1536x38x38 -> 1024x38x38
         y19 = conv(y19, (1, 1, 24*init_width_size, 16*init_width_size), self.trainable, name='conv%d' % (layer_num + 2))
@@ -271,7 +277,7 @@ class YOLOV5(object):
         y19, layer_num = cspstage(y19, self.trainable, 16*init_width_size, init_depth_size, layer_num, 8, 1+11*init_depth_size)
         
         # 1024x38x38 -> 1024x19x19
-        y19_downsample = conv(y19, (1, 1, 16*init_width_size, 16*init_width_size), trainable=self.trainable, name='downsample2', downsaple=True)
+        y19_downsample = conv(y19, (1, 1, 16*init_width_size, 16*init_width_size), trainable=self.trainable, name='downsample2', downsample=True)
         y19_output = conv(y19_downsample, (1, 1, 16*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
                           name='conv_lbbox', activate=False, bn=False)
 

@@ -1,16 +1,22 @@
 #! /usr/bin/env python
 # coding=utf-8
 import numpy as np
-import tensorflow as tf
 import core.utils as utils
 import core.common as common
 import core.backbone as backbone
 from core.config import cfg
 
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 
 class YOLOV3Tiny(object):
     def __init__(self, input_data, trainable):
-        self.net_type = cfg.NET_TYPE
+        self.net_type = cfg.YOLO.NET_TYPE
         self.trainable = trainable
         self.classes = utils.read_class_names(cfg.YOLO.CLASSES)
         self.num_class = len(self.classes)
@@ -21,7 +27,7 @@ class YOLOV3Tiny(object):
         self.upsample_method = cfg.YOLO.UPSAMPLE_METHOD
 
         try:
-            self.conv_lbbox, self.conv_mbbox, self.conv_sbbox = self.__build_nework(input_data)
+            self.conv_lbbox, self.conv_mbbox = self.__build_nework(input_data)
         except:
             raise NotImplementedError("Can not build up yolov3 network!")
 
@@ -51,7 +57,7 @@ class YOLOV3Tiny(object):
         input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 256, 512), trainable=self.trainable, name='conv5')
-        input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        input_data = tf.nn.max_pool(input_data, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME')
 
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 512, 1024), trainable=self.trainable, name='conv6')
         # end 
@@ -69,7 +75,7 @@ class YOLOV3Tiny(object):
         with tf.variable_scope('route'):
             input_data = tf.concat([input_data, route], axis=-1)
 
-        conv_mobj_branch = common.convolutional(input_data, (3, 3, 384, 256),  self.trainable, name='conv_mobj_branch' )
+        conv_mobj_branch = common.convolutional(input_data, (3, 3, 384, 256), self.trainable, name='conv_mobj_branch')
         conv_mbbox = common.convolutional(conv_mobj_branch, (1, 1, 256, 3 * (self.num_class + 5)),
                                           trainable=self.trainable, name='conv_mbbox', activate=False, bn=False)
 
@@ -88,7 +94,7 @@ class YOLOV3Tiny(object):
         conv_raw_dxdy = conv_output[:, :, :, :, 0:2]
         conv_raw_dwdh = conv_output[:, :, :, :, 2:4]
         conv_raw_conf = conv_output[:, :, :, :, 4:5]
-        conv_raw_prob = conv_output[:, :, :, :, 5: ]
+        conv_raw_prob = conv_output[:, :, :, :, 5:]
 
         y = tf.tile(tf.range(output_size, dtype=tf.int32)[:, tf.newaxis], [1, output_size])
         x = tf.tile(tf.range(output_size, dtype=tf.int32)[tf.newaxis, :], [output_size, 1])
@@ -99,8 +105,8 @@ class YOLOV3Tiny(object):
 
         pred_xy = (tf.sigmoid(conv_raw_dxdy) + xy_grid) * stride
         pred_wh = (tf.exp(conv_raw_dwdh) * anchors) * stride
-        
         pred_xywh = tf.concat([pred_xy, pred_wh], axis=-1)
+
         pred_conf = tf.sigmoid(conv_raw_conf)
         pred_prob = tf.sigmoid(conv_raw_prob)
         return tf.concat([pred_xywh, pred_conf, pred_prob], axis=-1)
@@ -157,10 +163,10 @@ class YOLOV3Tiny(object):
 
 
     def loss_layer(self, conv, pred, label, bboxes, anchors, stride):
-        conv_shape  = tf.shape(conv)
-        batch_size  = conv_shape[0]
+        conv_shape = tf.shape(conv)
+        batch_size = conv_shape[0]
         output_size = conv_shape[1]
-        input_size  = stride * output_size
+        input_size = stride * output_size
         
         conv = tf.reshape(conv, (batch_size, output_size, output_size, self.anchor_per_scale, 5 + self.num_class))
         conv_raw_conf = conv[:, :, :, :, 4:5]
@@ -196,21 +202,18 @@ class YOLOV3Tiny(object):
         return giou_loss, conf_loss, prob_loss
 
 
-    def compute_loss(self, label_sbbox, label_mbbox, label_lbbox, true_sbbox, true_mbbox, true_lbbox):
-        with tf.name_scope('smaller_box_loss'):
-            loss_sbbox = self.loss_layer(self.conv_sbbox, self.pred_sbbox, label_sbbox, true_sbbox,
-                                         anchors = self.anchors[0], stride = self.strides[0])
+    def compute_loss(self, label_mbbox, label_lbbox, true_mbbox, true_lbbox):
         with tf.name_scope('medium_box_loss'):
             loss_mbbox = self.loss_layer(self.conv_mbbox, self.pred_mbbox, label_mbbox, true_mbbox,
-                                         anchors = self.anchors[1], stride = self.strides[1])
+                                         anchors=self.anchors[0], stride=self.strides[0])
         with tf.name_scope('bigger_box_loss'):
             loss_lbbox = self.loss_layer(self.conv_lbbox, self.pred_lbbox, label_lbbox, true_lbbox,
-                                         anchors = self.anchors[2], stride = self.strides[2])
+                                         anchors=self.anchors[1], stride=self.strides[1])
 
         with tf.name_scope('iou_loss'):
-            iou_loss = loss_sbbox[0] + loss_mbbox[0] + loss_lbbox[0]
+            iou_loss = loss_mbbox[0] + loss_lbbox[0]
         with tf.name_scope('conf_loss'):
-            conf_loss = loss_sbbox[1] + loss_mbbox[1] + loss_lbbox[1]
+            conf_loss = loss_mbbox[1] + loss_lbbox[1]
         with tf.name_scope('prob_loss'):
-            prob_loss = loss_sbbox[2] + loss_mbbox[2] + loss_lbbox[2]
+            prob_loss = loss_mbbox[2] + loss_lbbox[2]
         return iou_loss, conf_loss, prob_loss

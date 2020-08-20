@@ -3,3 +3,6 @@ __pycache__
 ckpts/
 core/__pycache__/
 log/
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/modules.xml

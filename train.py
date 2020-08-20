@@ -93,7 +93,7 @@ class YoloTrain(object):
                                                                                         self.true_sbboxes, self.true_mbboxes, self.true_lbboxes)
                 self.loss = self.iou_loss + self.conf_loss + self.prob_loss
             
-            elif self.net_type == 'yolov4' or self.net_type == 'yolov5' :
+            elif self.net_type == 'yolov4' or self.net_type == 'yolov5':
                 iou_use = 1  # (0, 1, 2) ==> (giou_loss, diou_loss, ciou_loss)
                 focal_use = False  # (False, True) ==> (normal, focal_loss)
                 label_smoothing = 0
@@ -115,7 +115,7 @@ class YoloTrain(object):
         with tf.name_scope('learn_rate'):
             self.global_step = tf.Variable(1.0, dtype=tf.float64, trainable=False, name='global_step')
             warmup_steps = tf.constant(self.warmup_periods * self.steps_per_period, dtype=tf.float64, name='warmup_steps')
-            train_steps = tf.constant((self.first_stage_epochs + self.second_stage_epochs)* self.steps_per_period,
+            train_steps = tf.constant((self.first_stage_epochs + self.second_stage_epochs) * self.steps_per_period,
                                        dtype=tf.float64, name='train_steps')
             
             self.learn_rate = tf.cond(pred=self.global_step < warmup_steps, true_fn=lambda: self.global_step / warmup_steps * self.learn_rate_init,
@@ -131,11 +131,10 @@ class YoloTrain(object):
             for var in tf.trainable_variables():
                 var_name = var.op.name
                 var_name_mess = str(var_name).split('/')
-                
                 if net_type == 'tiny':
-                    bboxes = ['conv_sbbox', 'conv_mbbox', 'conv_lbbox']
-                else:
                     bboxes = ['conv_mbbox', 'conv_lbbox']
+                else:
+                    bboxes = ['conv_sbbox', 'conv_mbbox', 'conv_lbbox']
                 
                 if var_name_mess[0] in bboxes:
                     self.first_stage_trainable_var_list.append(var)
@@ -157,7 +156,7 @@ class YoloTrain(object):
 
         with tf.name_scope('loader_and_saver'):
             self.loader = tf.train.Saver(self.net_var)
-            self.saver  = tf.train.Saver(tf.global_variables(), max_to_keep=1000)
+            self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=1000)
 
         with tf.name_scope('summary'):
             tf.summary.scalar('learn_rate', self.learn_rate)
@@ -233,7 +232,7 @@ class YoloTrain(object):
             train_epoch_loss, test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
             train_epoch_loss = np.mean(train_epoch_loss)
             
-            ckpt_file = os.path.join(self.ckpt_path, 'yolov4_test_loss=%.4f.ckpt' % test_epoch_loss)
+            ckpt_file = os.path.join(self.ckpt_path, '%s_test_loss=%.4f.ckpt' % (self.net_type, test_epoch_loss))
             log_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             if saving == 0.0:
                 saving = train_epoch_loss
@@ -247,7 +246,6 @@ class YoloTrain(object):
             
             else:
                 print('=> Epoch: %2d Time: %s Train loss: %.2f' % (epoch, log_time, train_epoch_loss))
-        self.saver.save(self.sess, '')
 
 
 if __name__ == '__main__':

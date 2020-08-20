@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import tensorflow as tf
 from core import utils
 from core.config import cfg
+
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
 
 
 def mish(inputs):
@@ -89,7 +95,7 @@ def cspfirst_stage(input_data, trainable, filters):
     input_data = conv(input_data, (1, 1, c, c), trainable=trainable, name='conv3', act_fun='mish')
     
     for i in range(1):
-        input_data = res_block(input_data, c, c / 2, c, trainable=trainable, name='residual%d' % (i + 0))
+        input_data = res_block(input_data, c, int(c / 2), c, trainable=trainable, name='residual%d' % (i + 0))
     
     input_data = conv(input_data, (1, 1, c, c), trainable=trainable, name='conv6', act_fun='mish')
     input_data = tf.concat([input_data, route], axis=-1)
@@ -110,13 +116,13 @@ def cspstage(input_data, trainable, filters, loop, layer_nums, route_nums, res_n
     c = filters
     out_layer = layer_nums + 1 + loop + 1
     route = input_data
-    route = conv(route, (1, 1, c, c / 2), trainable=trainable, name='conv_route%d' % route_nums, act_fun='mish')
-    input_data = conv(input_data, (1, 1, c, c / 2), trainable=trainable, name='conv%d' % (layer_nums + 1), act_fun='mish')
+    route = conv(route, (1, 1, c, int(c / 2)), trainable=trainable, name='conv_route%d' % route_nums, act_fun='mish')
+    input_data = conv(input_data, (1, 1, c, int(c / 2)), trainable=trainable, name='conv%d' % (layer_nums + 1), act_fun='mish')
     
     for i in range(loop):
-        input_data = res_block(input_data, c / 2, c / 2, c / 2, trainable=trainable, name='residual%d' % (i + res_nums))
+        input_data = res_block(input_data, int(c / 2), int(c / 2), int(c / 2), trainable=trainable, name='residual%d' % (i + res_nums))
     
-    input_data = conv(input_data, (1, 1, c / 2, c / 2), trainable=trainable, name='conv%d' % out_layer, act_fun='mish')
+    input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='conv%d' % out_layer, act_fun='mish')
     input_data = tf.concat([input_data, route], axis=-1)
     return input_data, out_layer
 
