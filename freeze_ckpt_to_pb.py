@@ -1,26 +1,33 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import tensorflow as tf
 from core.yolov3 import YOLOV3
 from core.yolov4 import YOLOV4
 from core.yolov5 import YOLOV5
 
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+
 
 if __name__ == "__main__":
+    """
     argv = sys.argv
     if len(argv) < 5:
         print('usage: python freeze_ckpt_to_pb.py gpu_id net_type(yolov5/yolov4/yolov3) ckpt_file pb_file')
         sys.exit()
-
-    gpu_id = argv[1]
-    net_type = argv[2]
-    ckpt_file = argv[3]
-    if not os.path.exists(ckpt_file):
+    """
+    gpu_id = '0' #argv[1]
+    net_type = 'yolov3' #argv[2]
+    ckpt_file = 'ckpts/yolov3_test-loss=10.0817.ckpt-125' #argv[3]
+    if not os.path.exists(ckpt_file + '.index'):
         print('freeze_ckpt_to_pb ckpt_file=', ckpt_file, ' not exist')
         sys.exit()
 
-    pb_file = argv[4] 
+    pb_file = 'ckpts/yolov3_test-loss=10.0817.ckpt-125.pb' #argv[4]
     print('freeze_ckpt_to_pb gpu_id=%s, net_type=%s, ckpt_file=%s, pb_file=%s' % (gpu_id, net_type, ckpt_file, pb_file))
     
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)

@@ -4,8 +4,14 @@ import cv2
 import random
 import colorsys
 import numpy as np
-import tensorflow as tf
 from core.config import cfg
+
+import tensorflow
+if tensorflow.__version__.startswith('1.'):
+    import tensorflow as tf
+else:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
 
 
 def read_class_names(class_file_name):

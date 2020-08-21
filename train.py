@@ -45,9 +45,11 @@ class YoloTrain(object):
         self.moving_ave_decay = cfg.YOLO.MOVING_AVE_DECAY
         self.max_bbox_per_scale = 150
 
-        self.train_logdir = ('./%s/log/train' % net_type)
-        if not os.path.exists(self.train_logdir):
-            os.makedirs(self.train_logdir)
+        self.log_path = ('log/%s' % net_type)
+        if os.path.exists(self.log_path):
+            shutil.rmtree(self.log_path)
+            #os.removedirs(self.log_path)
+        os.makedirs(self.log_path)
 
         self.trainset = Dataset('train', self.net_type)
         self.testset = Dataset('test', self.net_type)
@@ -165,13 +167,8 @@ class YoloTrain(object):
             tf.summary.scalar('prob_loss', self.prob_loss)
             tf.summary.scalar('total_loss', self.loss)
 
-            logdir = ('./%s/log/' % self.net_type)
-            if os.path.exists(logdir): 
-                shutil.rmtree(logdir)
-            os.makedirs(logdir)
-            
             self.write_op = tf.summary.merge_all()
-            self.summary_writer = tf.summary.FileWriter(logdir, graph=self.sess.graph)
+            self.summary_writer = tf.summary.FileWriter(self.log_path, graph=self.sess.graph)
 
 
     def train(self):
@@ -232,7 +229,7 @@ class YoloTrain(object):
             train_epoch_loss, test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
             train_epoch_loss = np.mean(train_epoch_loss)
             
-            ckpt_file = os.path.join(self.ckpt_path, '%s_test_loss=%.4f.ckpt' % (self.net_type, test_epoch_loss))
+            ckpt_file = os.path.join(self.ckpt_path, '%s_test-loss=%.4f.ckpt' % (self.net_type, test_epoch_loss))
             log_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             if saving == 0.0:
                 saving = train_epoch_loss
