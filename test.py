@@ -25,7 +25,7 @@ if __name__ == '__main__':
     gpu_id = '0' #argv[1]
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
 
-    pb_file = 'ckpts/yolov3_test-loss=10.0817.ckpt-125.pb' #argv[2]
+    pb_file = 'ckpts/yolov3_test-loss=8.9182.ckpt-453.pb' #argv[2]
     if not os.path.exists(pb_file):
         print('pb_file=%s not exist' % pb_file)
         sys.exit()
@@ -125,6 +125,5 @@ if __name__ == '__main__':
 
                     cv2.imwrite(out_file, out_img)
                     print('idx=', idx, 'in_img_file=', in_img_file, 'out_file=', out_file)
-        
         else:
             print('img_path_file=%s is error' % img_path_file)
