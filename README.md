@@ -4,7 +4,7 @@
 1. Install NVIDIA driver
 2. Install CUDA10.1 and cudnn7.5
 3. Install Anaconda3, download [website](https://repo.anaconda.com/archive/Anaconda3-2020.07-Linux-x86_64.sh)
-4. Install tensorflow, such as "sudo pip install tensorflow==1.15" etc.
+4. Install tensorflow, such as "sudo pip install tensorflow>=1.15 or tensorflow > 2.0" etc.
 
 ## Introduction
 A tensorflow implementation of YOLOv5 inspired by [https://github.com/ultralytics/yolov5](https://github.com/ultralytics/yolov5).
@@ -13,7 +13,7 @@ A tensorflow implementation of YOLOv4 inspired by [https://github.com/AlexeyAB/d
 
 Frame code from [https://github.com/YunYang1994/tensorflow-yolov3](https://github.com/YunYang1994/tensorflow-yolov3).
 
-Backbone: Darknet53; CSPDarknet53[[1]](https://arxiv.org/pdf/1911.11929.pdf), Mish[[2]](https://arxiv.org/abs/1908.08681); MobileNetV2
+Backbone: Darknet53; CSPDarknet53[[1]](https://arxiv.org/pdf/1911.11929.pdf), Mish[[2]](https://arxiv.org/abs/1908.08681); MobileNetV2; MobileNetV3(large and small)
 
 Neck: SPP[[3]](https://arxiv.org/abs/1406.4729), PAN[[4]](https://arxiv.org/abs/1803.01534); 
 
