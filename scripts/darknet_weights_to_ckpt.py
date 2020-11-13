@@ -4,14 +4,10 @@ from core.yolov3 import YOLOV3
 from core.yolov4 import YOLOV4
 
 
-iput_size = 416
-darknet_weights = './yolov4.weights'
-ckpt_file = './checkpoint/yolov4_coco.ckpt'
-
 def load_weights(var_list, weights_file):
     """Loads and converts pre-trained weights.
-        param var_list: list of network variables.
-        param weights_file: name of the binary file.
+    param var_list: list of network variables.
+    param weights_file: name of the binary file.
     return: list of assign ops"""
     with open(weights_file, "rb") as fp:
         _ = np.fromfile(fp, dtype=np.int32, count=5)
@@ -68,14 +64,19 @@ def load_weights(var_list, weights_file):
     return assign_ops
 
 
-with tf.name_scope('input'):
-    input_data = tf.placeholder(dtype=tf.float32,shape=(None, iput_size, iput_size, 3), name='input_data')
+if __name__ == '__main__':
+    iput_size = 416
+    darknet_weights = './yolov4.weights'
+    ckpt_file = './checkpoint/yolov4_coco.ckpt'
 
-model = YOLOV4(input_data, trainable=False)
-load_ops = load_weights(tf.global_variables(), darknet_weights)
-saver = tf.train.Saver(tf.global_variables())
+    with tf.name_scope('input'):
+        input_data = tf.placeholder(dtype=tf.float32,shape=(None, iput_size, iput_size, 3), name='input_data')
 
-with tf.Session() as sess:
-    sess.run(load_ops)
-    save_path = saver.save(sess, save_path=ckpt_file)
-    print('Model saved in path: {}'.format(save_path))
+    model = YOLOV4(input_data, trainable=False)
+    load_ops = load_weights(tf.global_variables(), darknet_weights)
+    saver = tf.train.Saver(tf.global_variables())
+
+    with tf.Session() as sess:
+        sess.run(load_ops)
+        save_path = saver.save(sess, save_path=ckpt_file)
+        print('Model saved in path: {}'.format(save_path))

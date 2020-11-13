@@ -273,6 +273,5 @@ class Dataset(object):
             return label_sbbox, label_mbbox, label_lbbox, sbboxes, mbboxes, lbboxes
 
 
-
     def __len__(self):
         return self.num_batchs

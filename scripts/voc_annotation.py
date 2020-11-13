@@ -44,8 +44,8 @@ def convert_voc_annotation(data_path, data_type, anno_path, use_difficult_bbox=T
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", default="/home/avBuffer/VoAI/VOC/")
-    parser.add_argument("--train_annotation", default="./data/dataset/voc_train.txt")
-    parser.add_argument("--test_annotation",  default="./data/dataset/voc_test.txt")
+    parser.add_argument("--train_annotation", default="./imgs/dataset/voc_train.txt")
+    parser.add_argument("--test_annotation",  default="./imgs/dataset/voc_test.txt")
     flags = parser.parse_args()
 
     if os.path.exists(flags.train_annotation):

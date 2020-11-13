@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
 import os
 import time
 import shutil
@@ -229,7 +228,7 @@ class YoloTrain(object):
             train_epoch_loss, test_epoch_loss = np.mean(train_epoch_loss), np.mean(test_epoch_loss)
             train_epoch_loss = np.mean(train_epoch_loss)
             
-            ckpt_file = os.path.join(self.ckpt_path, '%s_test-loss=%.4f.ckpt' % (self.net_type, test_epoch_loss))
+            ckpt_file = os.path.join(self.ckpt_path, 'social_%s_test-loss=%.4f.ckpt' % (self.net_type, test_epoch_loss))
             log_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             if saving == 0.0:
                 saving = train_epoch_loss

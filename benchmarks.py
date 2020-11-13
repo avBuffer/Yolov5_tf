@@ -14,8 +14,8 @@ from tensorflow.compat.v1 import InteractiveSession
 flags.DEFINE_boolean('tiny', False, 'yolo or yolo-tiny')
 flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
 flags.DEFINE_string('model', 'yolov4', 'yolov3 or yolov4')
-flags.DEFINE_string('weights', './data/yolov4.weights', 'path to weights file')
-flags.DEFINE_string('image', './data/kite.jpg', 'path to input image')
+flags.DEFINE_string('weights', './imgs/yolov4.weights', 'path to weights file')
+flags.DEFINE_string('image', './imgs/kite.jpg', 'path to input image')
 flags.DEFINE_integer('size', 416, 'resize images to')
 
 
@@ -78,7 +78,7 @@ def main(_argv):
     def run_model(x):
         return model(x)
 
-    # Test the TensorFlow Lite model on random input data.
+    # Test the TensorFlow Lite model on random input imgs.
     sum = 0
     original_image = cv2.imread(FLAGS.image)
     original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)

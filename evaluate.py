@@ -17,8 +17,8 @@ flags.DEFINE_string('framework', 'tf', 'select model type in (tf, tflite, trt)'
 flags.DEFINE_string('model', 'yolov4', 'yolov3 or yolov4')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_integer('size', 416, 'resize images to')
-flags.DEFINE_string('annotation_path', "./data/dataset/val2017.txt", 'annotation path')
-flags.DEFINE_string('write_image_path', "./data/detection/", 'write image path')
+flags.DEFINE_string('annotation_path', "./imgs/dataset/val2017.txt", 'annotation path')
+flags.DEFINE_string('write_image_path', "./imgs/detection/", 'write image path')
 flags.DEFINE_float('iou', 0.5, 'iou threshold')
 flags.DEFINE_float('score', 0.25, 'score threshold')
 

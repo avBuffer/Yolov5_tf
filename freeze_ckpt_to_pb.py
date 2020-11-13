@@ -22,12 +22,12 @@ if __name__ == "__main__":
     """
     gpu_id = '0' #argv[1]
     net_type = 'yolov3' #argv[2]
-    ckpt_file = 'ckpts/yolov3_test-loss=8.9182.ckpt-453' #argv[3]
+    ckpt_file = 'ckpts/social_yolov3_test-loss=3.2020.ckpt-198' #argv[3]
     if not os.path.exists(ckpt_file + '.index'):
         print('freeze_ckpt_to_pb ckpt_file=', ckpt_file, ' not exist')
         sys.exit()
 
-    pb_file = 'ckpts/yolov3_test-loss=8.9182.ckpt-453.pb' #argv[4]
+    pb_file = ckpt_file + '.pb' #argv[4]
     print('freeze_ckpt_to_pb gpu_id=%s, net_type=%s, ckpt_file=%s, pb_file=%s' % (gpu_id, net_type, ckpt_file, pb_file))
     
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)

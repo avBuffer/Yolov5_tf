@@ -25,28 +25,27 @@ if __name__ == '__main__':
     gpu_id = '0' #argv[1]
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
 
-    pb_file = 'ckpts/yolov3_test-loss=8.9182.ckpt-453.pb' #argv[2]
+    pb_file = 'ckpts/social_yolov3_test-loss=3.2020.ckpt-198.pb' #argv[2]
     if not os.path.exists(pb_file):
         print('pb_file=%s not exist' % pb_file)
         sys.exit()
 
-    img_path_file = 'D:/datasets/MosEggs/src/Images' #argv[3]
+    img_path_file = 'D:/datasets/Social/test' #argv[3]
     if not os.path.exists(img_path_file):
         print('img_path_file=%s not exist' % img_path_file)
         sys.exit()
 
-    out_path = 'out' #argv[4]
+    out_path = 'D:/datasets/Social/out' #argv[4]
     if not os.path.exists(out_path):
         os.makedirs(out_path)
     print('test gpu_id=%s, pb_file=%s, img_file=%s, out_path=%s' % (gpu_id, pb_file, img_path_file, out_path))
-    
-       
+
     num_classes = 1
     input_size = 416
-    score_thresh = 0.3
+    score_thresh = 0.6
 
-    iou_type = 'diou' #yolov4:diou, else giou
-    iou_thresh = 0.45
+    iou_type = 'iou' #yolov4:diou, else giou
+    iou_thresh = 0.3
 
     graph = tf.Graph()
     return_elements = ["input/input_data:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]

@@ -1,4 +1,5 @@
 .idea/
+.idea/*
 __pycache__
 ckpts/
 core/__pycache__/

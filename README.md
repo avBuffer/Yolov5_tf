@@ -1,5 +1,11 @@
 # YoloVx(yolov5/yolov4/yolov3/yolo_tiny)
 
+## Tensorflow
+1. Install NVIDIA driver
+2. Install CUDA10.1 and cudnn7.5
+3. Install Anaconda3, download [website](https://repo.anaconda.com/archive/Anaconda3-2020.07-Linux-x86_64.sh)
+4. Install tensorflow, such as "sudo pip install tensorflow==1.15" etc.
+
 ## Introduction
 A tensorflow implementation of YOLOv5 inspired by [https://github.com/ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 
