@@ -117,7 +117,27 @@ class Dataset(object):
         if random.random() < 0.5:
             _, w, _ = image.shape
             image = image[:, ::-1, :]
-            bboxes[:, [0,2]] = w - bboxes[:, [2, 0]]
+            bboxes[:, [0, 2]] = w - bboxes[:, [2, 0]]
+        return image, bboxes
+
+
+    def random_vertical_flip(self, image, bboxes):
+        if random.random() < 0.5:
+            h, _, _ = image.shape
+            image = image[::-1, :, :]
+            bboxes[:, [1, 3]] = h - bboxes[:, [3, 1]]
+        return image, bboxes
+
+
+    def random_horizontal_vertical_flip(self, image, bboxes):
+        if random.random() < 0.5:
+            _, w, _ = image.shape
+            image = image[:, ::-1, :]
+            bboxes[:, [0, 2]] = w - bboxes[:, [2, 0]]
+
+            h, _, _ = image.shape
+            image = image[::-1, :, :]
+            bboxes[:, [1, 3]] = h - bboxes[:, [3, 1]]
         return image, bboxes
 
 
@@ -171,9 +191,13 @@ class Dataset(object):
         
         image = np.array(cv2.imread(image_path))
         bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
+        if len(bboxes) <= 0:
+            raise KeyError("bboxes.len=%d does not exist ... " % len(bboxes))
 
         if self.data_aug:
             image, bboxes = self.random_horizontal_flip(np.copy(image), np.copy(bboxes))
+            image, bboxes = self.random_vertical_flip(np.copy(image), np.copy(bboxes))
+            #image, bboxes = self.random_horizontal_vertical_flip(np.copy(image), np.copy(bboxes))
             image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
             image, bboxes = self.random_translate(np.copy(image), np.copy(bboxes))
 

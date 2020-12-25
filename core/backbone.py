@@ -13,6 +13,7 @@ else:
 
 def darknet53(input_data, trainable):
     with tf.variable_scope('darknet'):
+        # input_data = tf.reshape(input_data, [-1, 416, 416, 3]) # print layer's shape
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 3, 32), trainable=trainable, name='conv0')
         input_data = common.convolutional(input_data, filters_shape=(3, 3, 32, 64), trainable=trainable, name='conv1', downsample=True)
 

@@ -236,7 +236,7 @@ class YOLOV3(object):
         conv_raw_dxdy = conv_output[:, :, :, :, 0:2]
         conv_raw_dwdh = conv_output[:, :, :, :, 2:4]
         conv_raw_conf = conv_output[:, :, :, :, 4:5]
-        conv_raw_prob = conv_output[:, :, :, :, 5: ]
+        conv_raw_prob = conv_output[:, :, :, :, 5:]
 
         y = tf.tile(tf.range(output_size, dtype=tf.int32)[:, tf.newaxis], [1, output_size])
         x = tf.tile(tf.range(output_size, dtype=tf.int32)[tf.newaxis, :], [output_size, 1])
@@ -246,7 +246,7 @@ class YOLOV3(object):
         xy_grid = tf.cast(xy_grid, tf.float32)
 
         pred_xy = (tf.sigmoid(conv_raw_dxdy) + xy_grid) * stride
-        pred_wh = tf.exp(conv_raw_dwdh) * anchors * stride        
+        pred_wh = (tf.exp(conv_raw_dwdh) * anchors) * stride        
         pred_xywh = tf.concat([pred_xy, pred_wh], axis=-1)
 
         pred_conf = tf.sigmoid(conv_raw_conf)
